@@ -1,11 +1,12 @@
 # /// script
 # dependencies = [
 #   "matplotlib",
-#   "sklearn",
-#   "pathlib",
+#   "scikit-learn",
 #   "requests",
 #   "pandas",
 #   "numpy",
+#   "scipy",
+#   "pathlib",
 # ]
 # ///
 
