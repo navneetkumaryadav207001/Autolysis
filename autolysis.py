@@ -21,8 +21,9 @@ from pathlib import Path
 import requests
 import base64
 
-# Function to securely retrieve API key from environment
+# Function to securely retrieve API key from environment for reusability
 def get_api_key():
+    """Get the api Key."""
     return os.environ.get("AIPROXY_TOKEN")
 
 # Create output directories
@@ -142,6 +143,7 @@ def query_llm(prompt, api_key, images=None):
         }
 
         # If images are provided, send them along with the prompt
+        # Vision Capabilities of the model used here
         if images:
             base64_image = encode_image(images[0])
             data["messages"][0]["content"] = [
@@ -169,13 +171,17 @@ def query_llm(prompt, api_key, images=None):
 # Generate narrative
 def generate_narrative(df, analysis_results, output_dir, image_paths):
     """Generate a narrative summary using the LLM."""
+    # Dynamic Prompt Based on the data
     prompt = (
         f"Dataset has {df.shape[0]} rows and {df.shape[1]} columns.\n"
         f"Key insights:\n"
         f"- Missing values: {analysis_results['missing_values'].sum()} total.\n"
         f"- Detected outliers in columns: {analysis_results['outliers'][analysis_results['outliers'] > 0].to_dict()}\n"
         f"- Clusters identified: {len(np.unique(analysis_results['clusters']))}.\n\n"
-        "Generate a concise summary highlighting significant findings. Discuss potential implications, suggest further steps, and reference visualizations where appropriate. and give detailed statistical explanations or results from the cluster analysis and correlation implications. and also tell about how the correlation matrix and missing values enhances the analysis"
+        """Generate a concise summary highlighting significant findings. 
+        Discuss potential implications, suggest further steps, and reference visualizations where appropriate. 
+        and give detailed statistical explanations or results from the cluster analysis and correlation implications.
+          and also tell about how the correlation matrix and missing values enhances the analysis"""
     )
 
     # Retrieve API key securely
