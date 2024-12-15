@@ -7,7 +7,6 @@
 #   "numpy",
 #   "scipy",
 #   "pathlib",
-#   "base64",
 # ]
 # ///
 
