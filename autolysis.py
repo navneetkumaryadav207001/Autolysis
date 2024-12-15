@@ -1,3 +1,15 @@
+# /// script
+# dependencies = [
+#   "matplotlib",
+#   "scikit-learn",
+#   "requests",
+#   "pandas",
+#   "numpy",
+#   "scipy",
+#   "pathlib",
+# ]
+# ///
+
 import os
 import sys
 import pandas as pd
@@ -163,7 +175,7 @@ def generate_narrative(df, analysis_results, output_dir, image_paths):
         f"- Missing values: {analysis_results['missing_values'].sum()} total.\n"
         f"- Detected outliers in columns: {analysis_results['outliers'][analysis_results['outliers'] > 0].to_dict()}\n"
         f"- Clusters identified: {len(np.unique(analysis_results['clusters']))}.\n\n"
-        "Generate a concise summary highlighting significant findings. Discuss potential implications, suggest further steps, and reference visualizations where appropriate."
+        "Generate a concise summary highlighting significant findings. Discuss potential implications, suggest further steps, and reference visualizations where appropriate. and give detailed statistical explanations or results from the cluster analysis and correlation implications. and also tell about how the correlation matrix and missing values enhances the analysis"
     )
 
     # Retrieve API key securely
