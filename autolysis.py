@@ -2,7 +2,6 @@ import os
 import sys
 import pandas as pd
 import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from scipy.stats import zscore
@@ -71,13 +70,14 @@ def perform_clustering(df, n_clusters=3):
 # Visualize data
 def visualize_data(df, output_dir):
     """Generate visualizations for the dataset."""
-    sns.set(style="whitegrid")
-    
     # Correlation heatmap
     correlation_matrix = correlation_analysis(df)
     plt.figure(figsize=(8, 6))
-    sns.heatmap(correlation_matrix, annot=False, cmap="coolwarm", fmt=".2f")
+    plt.imshow(correlation_matrix, cmap="coolwarm", interpolation="none")
+    plt.colorbar()
     plt.title("Correlation Matrix")
+    plt.xticks(range(len(correlation_matrix.columns)), correlation_matrix.columns, rotation=90)
+    plt.yticks(range(len(correlation_matrix.columns)), correlation_matrix.columns)
     correlation_path = f"{output_dir}/correlation_matrix.png"
     plt.savefig(correlation_path, dpi=100)
     plt.close()
