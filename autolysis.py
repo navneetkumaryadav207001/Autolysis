@@ -1,3 +1,15 @@
+# /// script
+# dependencies = [
+#   "matplotlib",
+#   "scikit-learn",
+#   "requests",
+#   "pandas",
+#   "numpy",
+#   "scipy",
+#   "pathlib",
+# ]
+# ///
+
 import os
 import sys
 import pandas as pd
