@@ -149,10 +149,12 @@ def generate_narrative(df, analysis_results, output_dir, image_paths):
     narrative = query_llm(prompt, images=image_paths)
 
     if narrative:
-        with open(f"{output_dir}/README.md", "w") as f:
+        # Save narrative to README.md in the current working directory
+        readme_path = os.path.join(os.getcwd(), "README.md")
+        with open(readme_path, "w") as f:
             f.write("# Analysis Narrative\n\n")
             f.write(narrative)
-            print("Narrative saved.")
+            print(f"Narrative saved to {readme_path}")
 
 # Main script
 def main():
