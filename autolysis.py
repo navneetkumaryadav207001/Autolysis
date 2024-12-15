@@ -163,9 +163,9 @@ def main():
 
     file_path = sys.argv[1]
     base_name = os.path.splitext(os.path.basename(file_path))[0]
-    output_dir = f"{base_name}"
+    output_dir = os.getcwd()  # Save files in the current working directory
 
-    # Create directories
+    # Create directories (optional, since saving in the current working directory)
     create_directories([output_dir])
 
     # Load dataset
