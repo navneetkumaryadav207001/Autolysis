@@ -7,6 +7,7 @@
 #   "numpy",
 #   "scipy",
 #   "pathlib",
+#   "tenacity",
 # ]
 # ///
 
@@ -20,31 +21,35 @@ from scipy.stats import zscore
 from pathlib import Path
 import requests
 import base64
+from tenacity import retry, stop_after_attempt, wait_fixed
+
+# Retry policy: Stop after 3 attempts and wait 2 seconds between retries.
+default_retry = retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
 
 # Function to securely retrieve API key from environment for reusability
+@default_retry
 def get_api_key():
-    """Get the api Key."""
+    """Get the API key."""
     return os.environ.get("AIPROXY_TOKEN")
 
 # Create output directories
+@default_retry
 def create_directories(base_dirs):
     """Create directories for output storage."""
     for base_dir in base_dirs:
         Path(base_dir).mkdir(parents=True, exist_ok=True)
 
 # Load CSV file
+@default_retry
 def load_csv(file_path):
     """Load a CSV file with UTF-8 encoding and error handling."""
-    try:
-        with open(file_path, encoding='utf-8', errors='ignore') as file:
-            df = pd.read_csv(file)
-        print(f"Loaded dataset with {df.shape[0]} rows and {df.shape[1]} columns.")
-        return df
-    except Exception as e:
-        print(f"Error loading CSV file: {e}")
-        sys.exit(1)
+    with open(file_path, encoding='utf-8', errors='ignore') as file:
+        df = pd.read_csv(file)
+    print(f"Loaded dataset with {df.shape[0]} rows and {df.shape[1]} columns.")
+    return df
 
 # Analyze missing values
+@default_retry
 def analyze_missing_values(df):
     """Analyze missing values in the dataset."""
     missing_values = df.isnull().sum()
@@ -53,6 +58,7 @@ def analyze_missing_values(df):
     return missing_values
 
 # Generate summary statistics
+@default_retry
 def summary_statistics(df):
     """Generate summary statistics for numeric and categorical data."""
     numeric_summary = df.describe(include=[np.number])
@@ -60,13 +66,15 @@ def summary_statistics(df):
     return numeric_summary, categorical_summary
 
 # Correlation matrix
+@default_retry
 def correlation_analysis(df):
     """Perform correlation analysis for numeric data."""
     numeric_df = df.select_dtypes(include=[np.number])
     correlation_matrix = numeric_df.corr()
     return correlation_matrix
 
-# Data distribution visualization (new)
+# Data distribution visualization
+@default_retry
 def visualize_data_distribution(df):
     """Visualize the distribution of numeric data."""
     numeric_df = df.select_dtypes(include=[np.number])
@@ -79,6 +87,7 @@ def visualize_data_distribution(df):
         plt.show()
 
 # Outlier detection
+@default_retry
 def detect_outliers(df):
     """Detect outliers in numeric data using Z-scores."""
     numeric_df = df.select_dtypes(include=[np.number])
@@ -87,6 +96,7 @@ def detect_outliers(df):
     return outliers
 
 # Perform clustering
+@default_retry
 def perform_clustering(df, n_clusters=3):
     """Perform K-means clustering on numeric data."""
     numeric_df = df.select_dtypes(include=[np.number]).dropna()
@@ -95,6 +105,7 @@ def perform_clustering(df, n_clusters=3):
     return clusters
 
 # Visualize data
+@default_retry
 def visualize_data(df, output_dir):
     """Generate visualizations for the dataset."""
     # Correlation heatmap
@@ -120,58 +131,48 @@ def visualize_data(df, output_dir):
 
     return [correlation_path, missing_values_path]
 
+@default_retry
 def encode_image(image_path):
     """Encode image to base64 for LLM integration."""
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 # Interact with LLM using API request via proxy
+@default_retry
 def query_llm(prompt, api_key, images=None):
     """Query the LLM via API for narrative generation."""
-    try:
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
 
-        # Prepare the data structure
-        data = {
-            "model": "gpt-4o-mini",
-            "messages": [
-                {"role": "user", "content": prompt}  # Text prompt from the user
-            ],
-        }
+    data = {
+        "model": "gpt-4o-mini",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+    }
 
-        # If images are provided, send them along with the prompt
-        # Vision Capabilities of the model used here
-        if images:
-            base64_image = encode_image(images[0])
-            data["messages"][0]["content"] = [
-                {"type": "text", "text": prompt},
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{base64_image}"
-                    }
-                },
-            ]
+    if images:
+        base64_image = encode_image(images[0])
+        data["messages"][0]["content"] = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
+        ]
 
-        response = requests.post(
-            "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions",
-            headers=headers,
-            json=data
-        )
-        response.raise_for_status()
-        result = response.json()
-        return result["choices"][0]["message"]["content"].strip()
-    except requests.exceptions.RequestException as e:
-        print(f"Error querying LLM: {e}")
-        return None
+    response = requests.post(
+        "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions",
+        headers=headers,
+        json=data
+    )
+    response.raise_for_status()
+    result = response.json()
+    return result["choices"][0]["message"]["content"].strip()
 
 # Generate narrative
+@default_retry
 def generate_narrative(df, analysis_results, output_dir, image_paths):
     """Generate a narrative summary using the LLM."""
-    # Dynamic Prompt Based on the data
     prompt = (
         f"Dataset has {df.shape[0]} rows and {df.shape[1]} columns.\n"
         f"Key insights:\n"
@@ -179,17 +180,13 @@ def generate_narrative(df, analysis_results, output_dir, image_paths):
         f"- Detected outliers in columns: {analysis_results['outliers'][analysis_results['outliers'] > 0].to_dict()}\n"
         f"- Clusters identified: {len(np.unique(analysis_results['clusters']))}.\n\n"
         """Generate a concise summary highlighting significant findings. 
-        Discuss potential implications, suggest further steps, and reference visualizations where appropriate. 
-        and give detailed statistical explanations or results from the cluster analysis and correlation implications.
-          and also tell about how the correlation matrix and missing values enhances the analysis"""
+        Discuss potential implications, suggest further steps, and reference visualizations where appropriate."""
     )
 
-    # Retrieve API key securely
     api_key = get_api_key()
     narrative = query_llm(prompt, api_key, images=image_paths)
 
     if narrative:
-        # Save narrative to README.md in the current working directory
         readme_path = os.path.join(os.getcwd(), "README.md")
         with open(readme_path, "w") as f:
             f.write("# Analysis Narrative\n\n")
@@ -197,6 +194,7 @@ def generate_narrative(df, analysis_results, output_dir, image_paths):
             print(f"Narrative saved to {readme_path}")
 
 # Main script
+@default_retry
 def main():
     """Main function for orchestrating the data analysis pipeline."""
     if len(sys.argv) != 2:
@@ -205,15 +203,11 @@ def main():
 
     file_path = sys.argv[1]
     base_name = os.path.splitext(os.path.basename(file_path))[0]
-    output_dir = os.getcwd()  # Save files in the current working directory
+    output_dir = os.getcwd()
 
-    # Create directories (optional, since saving in the current working directory)
     create_directories([output_dir])
-
-    # Load dataset
     df = load_csv(file_path)
 
-    # Perform analysis
     numeric_summary, categorical_summary = summary_statistics(df)
     missing_values = analyze_missing_values(df)
     outliers = detect_outliers(df)
@@ -227,10 +221,7 @@ def main():
         "clusters": clusters,
     }
 
-    # Visualize results
     image_paths = visualize_data(df, output_dir)
-
-    # Generate narrative
     generate_narrative(df, analysis_results, output_dir, image_paths)
 
 if __name__ == "__main__":
